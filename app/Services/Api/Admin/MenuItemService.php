@@ -61,102 +61,99 @@ class MenuItemService
         return $item;
     }
 
-    public function create(array $data): MenuItem
-    {
-        return DB::transaction(function () use ($data) {
-            $restaurant = $this->getActiveRestaurant((int) $data['restaurant_id']);
+   public function create(array $data): MenuItem
+{
+    return DB::transaction(function () use ($data) {
+        $restaurant = $this->getActiveRestaurant((int) $data['restaurant_id']);
 
-            $categoryId = $data['category_id'] ?? null;
+        $categoryId = $data['category_id'] ?? null;
 
-            if ($categoryId) {
-                $this->getValidCategory((int) $categoryId, $restaurant->id);
+        if ($categoryId) {
+            $this->getValidCategory((int) $categoryId, $restaurant->id);
+        }
+
+        $menuItem = MenuItem::create([
+            'restaurant_id' => $restaurant->id,
+            'category_id' => $categoryId,
+            'name' => $data['name'],
+            'description' => $data['description'] ?? null,
+            'price' => $data['price'],
+            'status' => $data['status'] ?? 'active',
+        ]);
+
+        if (isset($data['image'])) {
+            $this->storeMenuItemImage($menuItem, $data['image']);
+        }
+
+        return $menuItem->fresh([
+            'restaurant:id,name,status',
+            'category:id,restaurant_id,name,is_active',
+            'media',
+        ]);
+    });
+}
+   public function update(MenuItem $menuItem, array $data): MenuItem
+{
+    return DB::transaction(function () use ($menuItem, $data) {
+        $restaurantId = isset($data['restaurant_id'])
+            ? (int) $data['restaurant_id']
+            : (int) $menuItem->restaurant_id;
+
+        $restaurant = $this->getActiveRestaurant($restaurantId);
+
+        $categoryId = array_key_exists('category_id', $data)
+            ? $data['category_id']
+            : $menuItem->category_id;
+
+        if ($categoryId) {
+            $this->getValidCategory((int) $categoryId, $restaurant->id);
+        }
+
+        $itemUpdateData = [];
+
+        if ((int) $menuItem->restaurant_id !== $restaurant->id) {
+            $itemUpdateData['restaurant_id'] = $restaurant->id;
+        }
+
+        if ((int) $menuItem->category_id !== (int) $categoryId) {
+            $itemUpdateData['category_id'] = $categoryId;
+        }
+
+        if (array_key_exists('name', $data) && $menuItem->name !== $data['name']) {
+            $itemUpdateData['name'] = $data['name'];
+        }
+
+        if (array_key_exists('description', $data)) {
+            $description = $data['description'] ?? null;
+
+            if ($menuItem->description !== $description) {
+                $itemUpdateData['description'] = $description;
             }
+        }
 
-            $menuItem = MenuItem::create([
-                'restaurant_id' => $restaurant->id,
-                'category_id' => $categoryId,
-                'name' => $data['name'],
-                'description' => $data['description'] ?? null,
-                'price' => $data['price'],
-                'status' => $data['status'] ?? 'active',
-            ]);
+        if (array_key_exists('price', $data) && (float) $menuItem->price !== (float) $data['price']) {
+            $itemUpdateData['price'] = $data['price'];
+        }
 
-            $this->storeMenuItemImages($menuItem, $data['images'] ?? []);
+        if (array_key_exists('status', $data) && $menuItem->status !== $data['status']) {
+            $itemUpdateData['status'] = $data['status'];
+        }
 
-            return $menuItem->fresh([
-                'restaurant:id,name,status',
-                'category:id,restaurant_id,name,is_active',
-                'media',
-            ]);
-        });
-    }
+        if (! empty($itemUpdateData)) {
+            $menuItem->update($itemUpdateData);
+        }
 
-    public function update(MenuItem $menuItem, array $data): MenuItem
-    {
-        return DB::transaction(function () use ($menuItem, $data) {
-            $restaurantId = isset($data['restaurant_id'])
-                ? (int) $data['restaurant_id']
-                : (int) $menuItem->restaurant_id;
+        if (isset($data['image'])) {
+            $this->replaceMenuItemImage($menuItem, $data['image']);
+        }
 
-            $restaurant = $this->getActiveRestaurant($restaurantId);
-
-            $categoryId = array_key_exists('category_id', $data)
-                ? $data['category_id']
-                : $menuItem->category_id;
-
-            if ($categoryId) {
-                $this->getValidCategory((int) $categoryId, $restaurant->id);
-            }
-
-            $itemUpdateData = [];
-
-            if ((int) $menuItem->restaurant_id !== $restaurant->id) {
-                $itemUpdateData['restaurant_id'] = $restaurant->id;
-            }
-
-            if ((int) $menuItem->category_id !== (int) $categoryId) {
-                $itemUpdateData['category_id'] = $categoryId;
-            }
-
-            if (array_key_exists('name', $data) && $menuItem->name !== $data['name']) {
-                $itemUpdateData['name'] = $data['name'];
-            }
-
-            if (array_key_exists('description', $data)) {
-                $description = $data['description'] ?? null;
-
-                if ($menuItem->description !== $description) {
-                    $itemUpdateData['description'] = $description;
-                }
-            }
-
-            if (array_key_exists('price', $data) && (float) $menuItem->price !== (float) $data['price']) {
-                $itemUpdateData['price'] = $data['price'];
-            }
-
-            if (array_key_exists('status', $data) && $menuItem->status !== $data['status']) {
-                $itemUpdateData['status'] = $data['status'];
-            }
-
-            if (! empty($itemUpdateData)) {
-                $menuItem->update($itemUpdateData);
-            }
-
-            if (! empty($data['delete_media_ids'])) {
-                $this->deleteMediaByIds($data['delete_media_ids'], $menuItem->id);
-            }
-
-            if (! empty($data['images'])) {
-                $this->storeMenuItemImages($menuItem, $data['images']);
-            }
-
-            return $menuItem->fresh([
-                'restaurant:id,name,status',
-                'category:id,restaurant_id,name,is_active',
-                'media',
-            ]);
-        });
-    }
+        return $menuItem->fresh([
+            'restaurant:id,name,status',
+            'category:id,restaurant_id,name,is_active',
+            'media',
+        ]);
+    });
+}
 
     public function delete(MenuItem $menuItem): void
     {
@@ -185,6 +182,7 @@ class MenuItemService
                 ->restore();
         });
     }
+
 
     public function forceDelete(int $id): void
     {
@@ -283,4 +281,71 @@ class MenuItemService
             Storage::disk('public')->delete($media->file_path);
         }
     }
+    private function storeMenuItemImage(MenuItem $menuItem, $image): void
+{
+    Storage::disk('public')->makeDirectory('menu-items');
+
+    $mimeType = $image->getClientMimeType();
+    $size = $image->getSize();
+
+    $fileName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+
+    $path = $image->storeAs('menu-items', $fileName, 'public');
+
+    Media::create([
+        'menu_item_id' => $menuItem->id,
+        'restaurant_id' => null,
+        'file_name' => $fileName,
+        'file_path' => $path,
+        'file_url' => asset('storage/' . $path),
+        'mime_type' => $mimeType,
+        'size' => $size,
+        'type' => 'image',
+    ]);
+}
+
+private function replaceMenuItemImage(MenuItem $menuItem, $image): void
+{
+    Storage::disk('public')->makeDirectory('menu-items');
+
+    $mimeType = $image->getClientMimeType();
+    $size = $image->getSize();
+
+    $fileName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+
+    $path = $image->storeAs('menu-items', $fileName, 'public');
+
+    $oldMedia = $menuItem->media()->first();
+
+    if ($oldMedia) {
+        if (
+            $oldMedia->file_path &&
+            Storage::disk('public')->exists($oldMedia->file_path)
+        ) {
+            Storage::disk('public')->delete($oldMedia->file_path);
+        }
+
+        $oldMedia->update([
+            'file_name' => $fileName,
+            'file_path' => $path,
+            'file_url' => asset('storage/' . $path),
+            'mime_type' => $mimeType,
+            'size' => $size,
+            'type' => 'image',
+        ]);
+
+        return;
+    }
+
+    Media::create([
+        'menu_item_id' => $menuItem->id,
+        'restaurant_id' => null,
+        'file_name' => $fileName,
+        'file_path' => $path,
+        'file_url' => asset('storage/' . $path),
+        'mime_type' => $mimeType,
+        'size' => $size,
+        'type' => 'image',
+    ]);
+}
 }

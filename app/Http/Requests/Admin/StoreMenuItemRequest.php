@@ -54,12 +54,8 @@ class StoreMenuItemRequest extends FormRequest
                 'in:active,inactive',
             ],
 
-            'images' => [
+            'image' => [
                 'nullable',
-                'array',
-            ],
-
-            'images.*' => [
                 'file',
                 'image',
                 'mimes:jpg,jpeg,png,webp',
@@ -84,9 +80,9 @@ class StoreMenuItemRequest extends FormRequest
 
             'status.in' => 'Menu item status must be active or inactive.',
 
-            'images.*.image' => 'Each uploaded file must be an image.',
-            'images.*.mimes' => 'Images must be jpg, jpeg, png, or webp.',
-            'images.*.max' => 'Each image must not be larger than 4MB.',
+            'image.image' => 'The uploaded file must be an image.',
+            'image.mimes' => 'Image must be jpg, jpeg, png, or webp.',
+            'image.max' => 'Image must not be larger than 4MB.',
         ];
     }
 }

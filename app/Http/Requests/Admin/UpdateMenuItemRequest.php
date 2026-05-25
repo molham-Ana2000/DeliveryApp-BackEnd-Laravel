@@ -60,26 +60,12 @@ class UpdateMenuItemRequest extends FormRequest
                 'in:active,inactive',
             ],
 
-            'images' => [
+            'image' => [
                 'nullable',
-                'array',
-            ],
-
-            'images.*' => [
                 'file',
                 'image',
                 'mimes:jpg,jpeg,png,webp',
                 'max:4096',
-            ],
-
-            'delete_media_ids' => [
-                'nullable',
-                'array',
-            ],
-
-            'delete_media_ids.*' => [
-                'integer',
-                'exists:media,id',
             ],
         ];
     }
@@ -97,12 +83,9 @@ class UpdateMenuItemRequest extends FormRequest
 
             'status.in' => 'Menu item status must be active or inactive.',
 
-            'images.*.image' => 'Each uploaded file must be an image.',
-            'images.*.mimes' => 'Images must be jpg, jpeg, png, or webp.',
-            'images.*.max' => 'Each image must not be larger than 4MB.',
-
-            'delete_media_ids.array' => 'Deleted media IDs must be an array.',
-            'delete_media_ids.*.exists' => 'Selected media file does not exist.',
+            'image.image' => 'The uploaded file must be an image.',
+            'image.mimes' => 'Image must be jpg, jpeg, png, or webp.',
+            'image.max' => 'Image must not be larger than 4MB.',
         ];
     }
 }
