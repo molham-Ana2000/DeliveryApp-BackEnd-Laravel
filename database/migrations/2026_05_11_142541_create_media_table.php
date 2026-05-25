@@ -10,8 +10,13 @@ return new class extends Migration
     {
         Schema::create('media', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('restaurant_id')
+            ->nullable()
+            ->constrained('restaurants')
+            ->cascadeOnDelete();
 
-            $table->foreignId('menu_item_id')
+
+            $table->foreignId('menu_item_id')->nullable()
                 ->constrained('menu_items')
                 ->cascadeOnDelete();
 

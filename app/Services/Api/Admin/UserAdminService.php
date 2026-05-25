@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Exception;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\ValidationException;
+
 class UserAdminService
 {
     public function getUsersForAdmin(array $filters): LengthAwarePaginator
@@ -35,6 +36,10 @@ class UserAdminService
             ->latest()
             ->paginate($perPage);
     }
+    public function getUserById(User $user): User
+    {
+        return $user->load('addresses');
+    }
 
 
     public function updateUserByAdmin(User $user, array $data): User
@@ -54,6 +59,64 @@ class UserAdminService
         $user->update($updateData);
 
         return $user->load('addresses');
+    }
+    public function createAdminUser(array $data): User
+    {
+        return DB::transaction(function () use ($data) {
+            return User::create([
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'] ?? null,
+                'email' => $data['email'],
+                'phone' => $data['phone'] ?? null,
+                'birthday' => $data['birthday'] ?? null,
+                'role' => 'admin',
+                'password' => Hash::make($data['password']),
+            ]);
+        });
+    }
+
+    public function blockUser(User $user): void
+    {
+        $user->delete();
+    }
+
+    public function getTrashedUsers(array $filters = []): LengthAwarePaginator
+    {
+        $perPage = $filters['per_page'] ?? 10;
+        $search = $filters['search'] ?? null;
+        $role = $filters['role'] ?? null;
+
+        return User::onlyTrashed()
+            ->with('addresses')
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                });
+            })
+            ->when($role, function ($query) use ($role) {
+                $query->where('role', $role);
+            })
+            ->latest('deleted_at')
+            ->paginate($perPage);
+    }
+
+    public function restoreUser(int $userId): User
+    {
+        $user = User::onlyTrashed()->findOrFail($userId);
+
+        $user->restore();
+
+        return $user->load('addresses');
+    }
+
+    public function forceDeleteUser(int $userId): void
+    {
+        $user = User::onlyTrashed()->findOrFail($userId);
+
+        $user->forceDelete();
     }
  
     private function findServiceArea(float $lat, float $lng): ?ServiceArea

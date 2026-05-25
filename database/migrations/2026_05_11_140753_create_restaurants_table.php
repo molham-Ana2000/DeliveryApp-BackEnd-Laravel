@@ -32,6 +32,7 @@ return new class extends Migration
 
             $table->decimal('latitude', 10, 8)->require();
             $table->decimal('longitude', 11, 8)->require();
+            
 
             $table->enum('status', ['active', 'inactive'])->default('active');
 

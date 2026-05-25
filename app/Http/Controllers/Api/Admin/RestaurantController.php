@@ -57,7 +57,7 @@ class RestaurantController extends Controller
                 'message' => 'Restaurant created successfully.',
                 'data' => $restaurant->load([
                     'creator:id,first_name,last_name,email',
-                    'serviceArea:id,name,city,postal_code,country',
+                    'serviceArea:id,name,city,postal_code,country','photo',
                 ]),
             ], 201);
         } catch (InvalidArgumentException $e) {
@@ -167,5 +167,29 @@ class RestaurantController extends Controller
                 'message' => 'Failed to fetch restaurant menu categories.',
             ], 500);
         }
+    }
+    public function trashed(Request $request)
+    {
+        return response()->json(
+            $this->restaurantService->trashed($request->all())
+        );
+    }
+    public function restore(int $restaurantId)
+    {
+        $restaurant = $this->restaurantService->restore($restaurantId);
+
+        return response()->json([
+            'message' => 'Restaurant restored successfully.',
+            'data' => $restaurant,
+        ]);
+    }
+
+    public function forceDelete(int $restaurantId)
+    {
+        $this->restaurantService->forceDelete($restaurantId);
+
+        return response()->json([
+            'message' => 'Restaurant permanently deleted successfully.',
+        ]);
     }
 }

@@ -39,7 +39,8 @@ class MenuCategoryService
         ->orderBy('sort_order')
         ->latest()
         ->paginate((int) ($filters['per_page'] ?? 15));
-}
+
+        }
     public function findById(int $id): MenuCategory
     {
         $category = MenuCategory::query()

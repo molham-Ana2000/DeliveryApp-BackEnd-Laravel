@@ -17,7 +17,9 @@ class Media extends Model
         'file_url',
         'mime_type',
         'size',
-        'type',
+        'type',    
+        'restaurant_id',
+
     ];
 
     protected $appends = ['url'];
@@ -45,5 +47,9 @@ class Media extends Model
     public function menuItem()
     {
         return $this->belongsTo(MenuItem::class);
+    }
+    public function restaurant()
+    {
+        return $this->belongsTo(Restaurant::class);
     }
 }

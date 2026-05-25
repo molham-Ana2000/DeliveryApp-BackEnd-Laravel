@@ -56,6 +56,10 @@ class Restaurant extends Model
     {
         return $this->belongsTo(ServiceArea::class);
     }
+    public function photo()
+    {
+        return $this->hasOne(Media::class, 'restaurant_id');
+    }
 
     public function orders()
     {

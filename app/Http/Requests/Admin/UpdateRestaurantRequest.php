@@ -26,6 +26,7 @@ class UpdateRestaurantRequest extends FormRequest
             'address' => ['nullable', 'string'],
             'opening_time' => ['nullable', 'date_format:H:i'],
             'closing_time' => ['nullable', 'date_format:H:i', 'after:opening_time'],
+            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ];
     }
 }
