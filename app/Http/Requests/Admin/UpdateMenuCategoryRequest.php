@@ -14,23 +14,25 @@ class UpdateMenuCategoryRequest extends FormRequest
 
     public function rules(): array
     {
-        $categoryId = $this->route('menuCategory')?->id
-            ?? $this->route('menu_category')?->id
-            ?? $this->route('id');
+        $category = $this->route('menu_category');
+
+        $categoryId = $category?->id;
+        $restaurantId = $this->input('restaurant_id') ?? $category?->restaurant_id;
 
         return [
             'restaurant_id' => [
-                'required',
+                'nullable',
                 'integer',
                 'exists:restaurants,id',
             ],
 
             'name' => [
-                'required',
+                'nullable',
                 'string',
                 'max:150',
                 Rule::unique('menu_categories', 'name')
-                    ->where('restaurant_id', $this->input('restaurant_id'))
+                    ->where('restaurant_id', $restaurantId)
+                    ->whereNull('deleted_at')
                     ->ignore($categoryId),
             ],
 
@@ -46,9 +48,8 @@ class UpdateMenuCategoryRequest extends FormRequest
             ],
 
             'items' => [
-                'required',
+                'nullable',
                 'array',
-                'min:1',
             ],
 
             'items.*.id' => [
@@ -58,7 +59,7 @@ class UpdateMenuCategoryRequest extends FormRequest
             ],
 
             'items.*.name' => [
-                'required',
+                'required_with:items',
                 'string',
                 'max:150',
                 'distinct',
@@ -70,7 +71,7 @@ class UpdateMenuCategoryRequest extends FormRequest
             ],
 
             'items.*.price' => [
-                'required',
+                'required_with:items',
                 'numeric',
                 'min:0',
                 'max:99999999.99',
@@ -114,22 +115,18 @@ class UpdateMenuCategoryRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'restaurant_id.required' => 'Restaurant is required.',
             'restaurant_id.exists' => 'Selected restaurant does not exist.',
 
-            'name.required' => 'Category name is required.',
             'name.unique' => 'This category name already exists for this restaurant.',
 
-            'items.required' => 'At least one menu item is required.',
             'items.array' => 'Menu items must be an array.',
-            'items.min' => 'At least one menu item is required.',
 
             'items.*.id.exists' => 'Selected menu item does not exist.',
 
-            'items.*.name.required' => 'Menu item name is required.',
+            'items.*.name.required_with' => 'Menu item name is required.',
             'items.*.name.distinct' => 'Menu item names must be unique in the same request.',
 
-            'items.*.price.required' => 'Menu item price is required.',
+            'items.*.price.required_with' => 'Menu item price is required.',
             'items.*.price.numeric' => 'Menu item price must be a number.',
 
             'items.*.status.in' => 'Menu item status must be active or inactive.',

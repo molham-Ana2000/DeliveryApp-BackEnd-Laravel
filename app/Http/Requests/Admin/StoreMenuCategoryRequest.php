@@ -26,7 +26,8 @@ class StoreMenuCategoryRequest extends FormRequest
                 'string',
                 'max:150',
                 Rule::unique('menu_categories', 'name')
-                    ->where('restaurant_id', $this->input('restaurant_id')),
+                    ->where('restaurant_id', $this->input('restaurant_id'))
+                    ->whereNull('deleted_at'),
             ],
 
             'sort_order' => [
@@ -41,18 +42,18 @@ class StoreMenuCategoryRequest extends FormRequest
             ],
 
             'items' => [
-                'required',
+                'nullable',
                 'array',
-                'min:1',
             ],
 
             'items.*.name' => [
-                'required',
+                'required_with:items',
                 'string',
                 'max:150',
                 'distinct',
                 Rule::unique('menu_items', 'name')
-                    ->where('restaurant_id', $this->input('restaurant_id')),
+                    ->where('restaurant_id', $this->input('restaurant_id'))
+                    ->whereNull('deleted_at'),
             ],
 
             'items.*.description' => [
@@ -61,7 +62,7 @@ class StoreMenuCategoryRequest extends FormRequest
             ],
 
             'items.*.price' => [
-                'required',
+                'required_with:items',
                 'numeric',
                 'min:0',
                 'max:99999999.99',
@@ -96,16 +97,16 @@ class StoreMenuCategoryRequest extends FormRequest
             'name.required' => 'Category name is required.',
             'name.unique' => 'This category name already exists for this restaurant.',
 
-            'items.required' => 'At least one menu item is required.',
             'items.array' => 'Menu items must be an array.',
-            'items.min' => 'At least one menu item is required.',
 
-            'items.*.name.required' => 'Menu item name is required.',
+            'items.*.name.required_with' => 'Menu item name is required.',
             'items.*.name.unique' => 'This menu item name already exists for this restaurant.',
             'items.*.name.distinct' => 'Menu item names must be unique in the same request.',
 
-            'items.*.price.required' => 'Menu item price is required.',
+            'items.*.price.required_with' => 'Menu item price is required.',
             'items.*.price.numeric' => 'Menu item price must be a number.',
+
+            'items.*.status.in' => 'Menu item status must be active or inactive.',
 
             'items.*.images.*.image' => 'Each uploaded file must be an image.',
             'items.*.images.*.mimes' => 'Images must be jpg, jpeg, png, or webp.',
