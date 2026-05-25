@@ -76,37 +76,28 @@ class RestaurantService
                 'opening_time' => $data['opening_time'] ?? null,
                 'closing_time' => $data['closing_time'] ?? null,
             ]);
-                   if (isset($data['photo'])) {
-                        $photo = $data['photo'];
+                if (isset($data['photo'])) {
+                    $photo = $data['photo'];
 
-                        $originalName = $photo->getClientOriginalName();
-                        $mimeType = $photo->getClientMimeType();
-                        $size = $photo->getSize();
-                        $extension = $photo->getClientOriginalExtension();
+                    $originalName = $photo->getClientOriginalName();
+                    $mimeType = $photo->getClientMimeType();
+                    $size = $photo->getSize();
 
-                        $folder = public_path('restaurant');
+                    $fileName = time() . '_' . uniqid() . '.' . $photo->getClientOriginalExtension();
 
-                        if (! file_exists($folder)) {
-                            mkdir($folder, 0755, true);
-                        }
+                    $path = $photo->storeAs('restaurants', $fileName, 'public');
 
-                        $fileName = time() . '_' . uniqid() . '.' . $extension;
-
-                        $photo->move($folder, $fileName);
-
-                        $path = 'restaurant/' . $fileName;
-
-                        Media::create([
-                            'restaurant_id' => $restaurant->id,
-                            'menu_item_id' => null,
-                            'file_name' => $fileName,
-                            'file_path' => $path,
-                            'file_url' => asset($path),
-                            'mime_type' => $mimeType,
-                            'size' => $size,
-                            'type' => 'image',
-                        ]);
-                    }
+                    Media::create([
+                        'restaurant_id' => $restaurant->id,
+                        'menu_item_id' => null,
+                        'file_name' => $fileName,
+                        'file_path' => $path,
+                        'file_url' => asset('storage/' . $path),
+                        'mime_type' => $mimeType,
+                        'size' => $size,
+                        'type' => 'image',
+                    ]);
+                }
               return $restaurant->fresh([
                 'creator:id,first_name,last_name,email',
                 'photo',
@@ -146,55 +137,45 @@ class RestaurantService
                 'opening_time' => $data['opening_time'] ?? null,
                 'closing_time' => $data['closing_time'] ?? null,
             ]);
-         if (isset($data['photo'])) {
-            $photo = $data['photo'];
+                   if (isset($data['photo'])) {
+                        $photo = $data['photo'];
 
-            $mimeType = $photo->getClientMimeType();
-            $size = $photo->getSize();
-            $extension = $photo->getClientOriginalExtension();
+                        $mimeType = $photo->getClientMimeType();
+                        $size = $photo->getSize();
 
-            $folder = public_path('restaurant');
+                        $fileName = time() . '_' . uniqid() . '.' . $photo->getClientOriginalExtension();
 
-            if (! file_exists($folder)) {
-                mkdir($folder, 0755, true);
-            }
+                        $path = $photo->storeAs('restaurants', $fileName, 'public');
 
-            $fileName = time() . '_' . uniqid() . '.' . $extension;
+                        if ($restaurant->photo) {
+                            if (
+                                $restaurant->photo->file_path &&
+                                Storage::disk('public')->exists($restaurant->photo->file_path)
+                            ) {
+                                Storage::disk('public')->delete($restaurant->photo->file_path);
+                            }
 
-            $photo->move($folder, $fileName);
-
-            $path = 'restaurant/' . $fileName;
-
-            if ($restaurant->photo) {
-                if ($restaurant->photo->file_path) {
-                    $oldPath = public_path($restaurant->photo->file_path);
-
-                    if (file_exists($oldPath)) {
-                        unlink($oldPath);
+                            $restaurant->photo->update([
+                                'file_name' => $fileName,
+                                'file_path' => $path,
+                                'file_url' => asset('storage/' . $path),
+                                'mime_type' => $mimeType,
+                                'size' => $size,
+                                'type' => 'image',
+                            ]);
+                        } else {
+                            Media::create([
+                                'restaurant_id' => $restaurant->id,
+                                'menu_item_id' => null,
+                                'file_name' => $fileName,
+                                'file_path' => $path,
+                                'file_url' => asset('storage/' . $path),
+                                'mime_type' => $mimeType,
+                                'size' => $size,
+                                'type' => 'image',
+                            ]);
+                        }
                     }
-                }
-
-                $restaurant->photo->update([
-                    'file_name' => $fileName,
-                    'file_path' => $path,
-                    'file_url' => asset($path),
-                    'mime_type' => $mimeType,
-                    'size' => $size,
-                    'type' => 'image',
-                ]);
-            } else {
-                Media::create([
-                    'restaurant_id' => $restaurant->id,
-                    'menu_item_id' => null,
-                    'file_name' => $fileName,
-                    'file_path' => $path,
-                    'file_url' => asset($path),
-                    'mime_type' => $mimeType,
-                    'size' => $size,
-                    'type' => 'image',
-                ]);
-            }
-        }
 
 
                 return $restaurant->fresh([
