@@ -61,37 +61,37 @@ class MenuItemService
         return $item;
     }
 
-   public function create(array $data): MenuItem
-{
-    return DB::transaction(function () use ($data) {
-        $restaurant = $this->getActiveRestaurant((int) $data['restaurant_id']);
+    public function create(array $data): MenuItem
+    {
+        return DB::transaction(function () use ($data) {
+            $restaurant = $this->getActiveRestaurant((int) $data['restaurant_id']);
 
-        $categoryId = $data['category_id'] ?? null;
+            $categoryId = $data['category_id'] ?? null;
 
-        if ($categoryId) {
-            $this->getValidCategory((int) $categoryId, $restaurant->id);
-        }
+            if ($categoryId) {
+                $this->getValidCategory((int) $categoryId, $restaurant->id);
+            }
 
-        $menuItem = MenuItem::create([
-            'restaurant_id' => $restaurant->id,
-            'category_id' => $categoryId,
-            'name' => $data['name'],
-            'description' => $data['description'] ?? null,
-            'price' => $data['price'],
-            'status' => $data['status'] ?? 'active',
-        ]);
+            $menuItem = MenuItem::create([
+                'restaurant_id' => $restaurant->id,
+                'category_id' => $categoryId,
+                'name' => $data['name'],
+                'description' => $data['description'] ?? null,
+                'price' => $data['price'],
+                'status' => $data['status'] ?? 'active',
+            ]);
 
-        if (isset($data['image'])) {
-            $this->storeMenuItemImage($menuItem, $data['image']);
-        }
+            if (isset($data['image'])) {
+                $this->storeMenuItemImage($menuItem, $data['image']);
+            }
 
-        return $menuItem->fresh([
-            'restaurant:id,name,status',
-            'category:id,restaurant_id,name,is_active',
-            'media',
-        ]);
-    });
-}
+            return $menuItem->fresh([
+                'restaurant:id,name,status',
+                'category:id,restaurant_id,name,is_active',
+                'media',
+            ]);
+        });
+    }
    public function update(MenuItem $menuItem, array $data): MenuItem
 {
     return DB::transaction(function () use ($menuItem, $data) {
