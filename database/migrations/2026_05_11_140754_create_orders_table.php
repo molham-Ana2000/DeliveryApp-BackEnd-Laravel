@@ -77,7 +77,7 @@ return new class extends Migration
             $table->timestamp('paid_at')->nullable();
             $table->timestamp('not_paid_at')->nullable();
 
-            $table->timestamp('expires_at');
+            $table->timestamp('expires_at')->nullable();
 
             $table->foreignId('approved_by')
                 ->nullable()

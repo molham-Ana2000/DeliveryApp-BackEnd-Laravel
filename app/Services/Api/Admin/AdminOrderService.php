@@ -9,6 +9,7 @@ use App\Models\OrderStatusHistory;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use App\Models\Payment;
+use App\Services\FirebaseNotificationService;
 use Illuminate\Support\Facades\Mail;
 class AdminOrderService
 {
@@ -64,6 +65,20 @@ class AdminOrderService
                 'failed_at' => null,
                 'error_message' => null,
             ]);
+           try {
+                app(FirebaseNotificationService::class)->sendToUser(
+                    $order->customer_id,
+                    'Order Approved',
+                    "Your order #{$order->order_number} has been approved.",
+                    [
+                        'type' => 'order_status',
+                        'order_id' => $order->id,
+                        'status' => 'approved',
+                    ]
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
             return $order->load(['items', 'customer']);
         });
     }
@@ -112,6 +127,20 @@ class AdminOrderService
                 ])->render(),
                 'sent_at' => now(),
             ]);
+           try {
+                app(FirebaseNotificationService::class)->sendToUser(
+                    $order->customer_id,
+                    'Order Rejected',
+                    "Your order #{$order->order_number} has been rejected.",
+                    [
+                        'type' => 'order_status',
+                        'order_id' => $order->id,
+                        'status' => 'rejected',
+                    ]
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
 
             return $order->load(['items', 'customer', 'serviceArea']);
         });
@@ -160,6 +189,20 @@ class AdminOrderService
                 ])->render(),
                 'sent_at' => now(),
             ]);
+           try {
+                app(FirebaseNotificationService::class)->sendToUser(
+                    $order->customer_id,
+                    'Order Requested',
+                    "Your order #{$order->order_number} has been marked as requested.",
+                    [
+                        'type' => 'order_status',
+                        'order_id' => $order->id,
+                        'status' => 'requested',
+                    ]
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
 
             return $order->load(['items', 'customer']);
         });

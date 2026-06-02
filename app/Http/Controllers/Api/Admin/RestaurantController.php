@@ -83,7 +83,8 @@ class RestaurantController extends Controller
                 'message' => 'Restaurant fetched successfully.',
                 'data' => $restaurant->load([
                     'creator:id,name,email',
-                    'serviceArea:id,name,city,postal_code,country',
+                  
+                    'photo'
                 ]),
             ]);
         } catch (Throwable $e) {

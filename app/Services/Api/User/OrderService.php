@@ -13,7 +13,8 @@ use Illuminate\Support\Str;
 use Exception;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\NewOrderNotification;
-
+use App\Models\Notification;
+use App\Services\FirebaseNotificationService;
 
 class OrderService
 {
@@ -112,7 +113,6 @@ class OrderService
         foreach ($admins as $admin) {
             Mail::to($admin->email)->send(new NewOrderNotification($order));
 
-            // Log the email
             EmailLog::create([
                 'order_id' => $order->id,
                 'user_id' => $admin->id,
@@ -121,8 +121,29 @@ class OrderService
                 'body' => view('emails.new_order_notification', ['order' => $order])->render(),
                 'sent_at' => now(),
             ]);
+
+            Notification::create([
+                'user_id' => $admin->id,
+                'order_id' => $order->id,
+                'title' => 'New Order Received',
+                'body' => "New order #{$order->order_number} has been created.",
+            ]);
         }
 
+        // Send Firebase push to all admins ONLY ONCE
+        try {
+            app(FirebaseNotificationService::class)->sendToAdmins(
+                'New Order Created',
+                "New order #{$order->order_number} has been created.",
+                [
+                    'type' => 'new_order',
+                    'order_id' => $order->id,
+                    'status' => $order->status,
+                ]
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
             return $order->load(['items']);
         });
     }

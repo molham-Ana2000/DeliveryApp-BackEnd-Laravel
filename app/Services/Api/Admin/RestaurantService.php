@@ -22,7 +22,7 @@ class RestaurantService
     public function list(array $filters = []): LengthAwarePaginator
     {
         return Restaurant::query()
-            ->with(['creator:id,first_name,last_name,email', 'serviceArea:id,name,city,postal_code,country'])
+            ->with(['creator:id,first_name,last_name,email', 'serviceArea:id,name,city,postal_code,country','photo'])
             ->when(isset($filters['status']), function ($query) use ($filters) {
                 $query->where('status', $filters['status']);
             })
