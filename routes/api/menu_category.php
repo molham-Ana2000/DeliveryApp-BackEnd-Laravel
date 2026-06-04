@@ -14,4 +14,5 @@ Route::middleware(['auth:sanctum', 'admin'])
         Route::apiResource('menu-items', MenuItemController::class);
         Route::patch('menu-items/{id}/restore', [MenuItemController::class, 'restore']);
         Route::delete('menu-items/{id}/force-delete', [MenuItemController::class, 'forceDelete']);
+
     });

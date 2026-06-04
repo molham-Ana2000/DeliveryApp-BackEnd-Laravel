@@ -60,6 +60,19 @@ class OrderController extends Controller
             ], 422);
         }
     }
+     public function editData(Order $order)
+    {
+        $data = $this->orderService->getEditData(
+            auth()->id(),
+            $order
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Order edit data retrieved successfully.',
+            'data' => $data,
+        ]);
+    }
 
     public function show(Order $order): JsonResponse
     {

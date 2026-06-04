@@ -14,8 +14,9 @@ use Exception;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\NewOrderNotification;
 use App\Models\Notification;
+use App\Models\Restaurant;
 use App\Services\FirebaseNotificationService;
-
+use Illuminate\Support\Facades\Log;
 class OrderService
 {
     public function index(int $customerId, array $filters)
@@ -35,118 +36,366 @@ class OrderService
             ->latest()
             ->paginate($filters['per_page'] ?? 15);
     }
-
     public function create(int $customerId, array $data): Order
-    {
-        return DB::transaction(function () use ($customerId, $data) {
-            $addressData = $this->resolveAddress($customerId, $data);
+{
+    $order = DB::transaction(function () use ($customerId, $data) {
+        $addressData = $this->resolveAddress($customerId, $data);
 
-            $itemsTotal = 0;
-            $preparedItems = [];
+        $itemsTotal = 0;
+        $preparedItems = [];
 
-            foreach ($data['items'] as $itemData) {
-                $menuItem = MenuItem::query()
-                    ->where('id', $itemData['menu_item_id'])
-                    ->where('restaurant_id', $data['restaurant_id'])
-                    ->where('status', 'active')
-                    ->firstOrFail();
+        foreach ($data['items'] as $itemData) {
+            $menuItem = MenuItem::query()
+                ->where('id', $itemData['menu_item_id'])
+                ->where('restaurant_id', $data['restaurant_id'])
+                ->where('status', 'active')
+                ->firstOrFail();
 
-                $quantity = $itemData['quantity'];
-                $lineTotal = $menuItem->price * $quantity;
-                $itemsTotal += $lineTotal;
+            $quantity = $itemData['quantity'];
+            $lineTotal = $menuItem->price * $quantity;
+            $itemsTotal += $lineTotal;
 
-                $preparedItems[] = [
-                    'menu_item_id' => $menuItem->id,
-                    'item_name' => $menuItem->name,
-                    'item_price' => $menuItem->price,
-                    'quantity' => $quantity,
-                    'line_total' => $lineTotal,
-                    'customer_note' => $itemData['customer_note'] ?? null,
-                ];
-            }
+            $preparedItems[] = [
+                'menu_item_id' => $menuItem->id,
+                'item_name' => $menuItem->name,
+                'item_price' => $menuItem->price,
+                'quantity' => $quantity,
+                'line_total' => $lineTotal,
+                'customer_note' => $itemData['customer_note'] ?? null,
+            ];
+        }
 
-            $deliveryCost = 0;
-            $orderTotal = $itemsTotal + $deliveryCost;
+        $deliveryCost = 0;
+        $orderTotal = $itemsTotal + $deliveryCost;
 
-            $order = Order::create([
-                'order_number' => $this->generateOrderNumber(),
+        $order = Order::create([
+            'order_number' => $this->generateOrderNumber(),
 
-                'customer_id' => $customerId,
-                'restaurant_id' => $data['restaurant_id'],
+            'customer_id' => $customerId,
+            'restaurant_id' => $data['restaurant_id'],
 
-                'customer_address_id' => $addressData['customer_address_id'],
-                'service_area_id' => $addressData['service_area_id'],
+            'customer_address_id' => $addressData['customer_address_id'],
+            'service_area_id' => $addressData['service_area_id'],
 
-                'delivery_address' => $addressData['delivery_address'],
-                'delivery_latitude' => $addressData['delivery_latitude'],
-                'delivery_longitude' => $addressData['delivery_longitude'],
+            'delivery_address' => $addressData['delivery_address'],
+            'delivery_latitude' => $addressData['delivery_latitude'],
+            'delivery_longitude' => $addressData['delivery_longitude'],
 
-                'customer_note' => $data['customer_note'] ?? null,
+            'customer_note' => $data['customer_note'] ?? null,
 
-                'status' => 'pending',
-                'payment_status' => 'unpaid',
-                'loss_status' => 'none',
+            'status' => 'pending',
+            'payment_status' => 'unpaid',
+            'loss_status' => 'none',
 
-                'items_total' => $itemsTotal,
-                'delivery_cost' => $deliveryCost,
-                'order_total' => $orderTotal,
+            'items_total' => $itemsTotal,
+            'delivery_cost' => $deliveryCost,
+            'order_total' => $orderTotal,
 
-                'pending_at' => now(),
-                'expires_at' => now()->addMinutes(30),
-            ]);
+            'pending_at' => now(),
+            'expires_at' => now()->addMinutes(30),
+        ]);
 
-            $order->items()->createMany($preparedItems);
+        $order->items()->createMany($preparedItems);
 
-            OrderStatusHistory::create([
-                'order_id' => $order->id,
-                'changed_by' => $customerId,
-                'old_status' => 'pending',
-                'new_status' => 'pending',
-                'note' => 'Order created by customer.',
-                'created_at' => now(),
-            ]);
-             // ----------------------
-        // Notify admin
-        // ----------------------
-        $admins = User::query()->where('role', 'admin')->get();
+        OrderStatusHistory::create([
+            'order_id' => $order->id,
+            'changed_by' => $customerId,
+            'old_status' => 'pending',
+            'new_status' => 'pending',
+            'note' => 'Order created by customer.',
+            'created_at' => now(),
+        ]);
 
-        foreach ($admins as $admin) {
+        return $order->load(['items']);
+    });
+
+
+ 
+
+    $this->notifyAdminsForNewOrder($order);
+
+    return $order;
+}
+private function notifyAdminsForNewOrder(Order $order): void
+{
+    $admins = User::query()
+        ->where('role', 'admin')
+        ->whereNotNull('email')
+        ->get();
+
+    foreach ($admins as $admin) {
+        $subject = "New order #{$order->order_number} received";
+
+        Notification::create([
+            'user_id' => $admin->id,
+            'order_id' => $order->id,
+            'title' => 'New Order Received',
+            'body' => "New order #{$order->order_number} has been created.",
+            'is_read' => false,
+        ]);
+
+        $emailLog = EmailLog::create([
+            'order_id' => $order->id,
+            'user_id' => $admin->id,
+            'email' => $admin->email,
+            'subject' => $subject,
+            'body' => view('emails.new_order_notification', [
+                'order' => $order,
+            ])->render(),
+            'sent_at' => null,
+        ]);
+
+        try {
             Mail::to($admin->email)->send(new NewOrderNotification($order));
 
-            EmailLog::create([
-                'order_id' => $order->id,
-                'user_id' => $admin->id,
-                'email' => $admin->email,
-                'subject' => "New order #{$order->order_number} received",
-                'body' => view('emails.new_order_notification', ['order' => $order])->render(),
+            $emailLog->update([
                 'sent_at' => now(),
             ]);
-
-            Notification::create([
-                'user_id' => $admin->id,
-                'order_id' => $order->id,
-                'title' => 'New Order Received',
-                'body' => "New order #{$order->order_number} has been created.",
-            ]);
-        }
-
-        // Send Firebase push to all admins ONLY ONCE
-        try {
-            app(FirebaseNotificationService::class)->sendToAdmins(
-                'New Order Created',
-                "New order #{$order->order_number} has been created.",
-                [
-                    'type' => 'new_order',
-                    'order_id' => $order->id,
-                    'status' => $order->status,
-                ]
-            );
         } catch (\Throwable $e) {
+            $emailLog->update([
+                'failed_at' => now(),
+                'error_message' => $e->getMessage(),
+            ]);
+
             report($e);
         }
-            return $order->load(['items']);
-        });
     }
+
+    try {
+        app(FirebaseNotificationService::class)->sendToAdmins(
+            'New Order Created',
+            "New order #{$order->order_number} has been created.",
+            [
+                'type' => 'new_order',
+                'order_id' => (string) $order->id,
+                'status' => $order->status,
+            ]
+        );
+    } catch (\Throwable $e) {
+        report($e);
+    }
+}
+public function getEditData(int $customerId, Order $order): array
+{
+    if ($order->customer_id !== $customerId) {
+        abort(403, 'Unauthorized.');
+    }
+
+    $order->load([
+        'items',
+        'restaurant',
+    ]);
+
+    $restaurants = Restaurant::query()
+        ->where('status', 'active')
+        ->with([
+            'photo',
+            'categories' => function ($query) {
+                $query->where('is_active', true)
+                    ->orderBy('sort_order');
+            },
+            'categories.menuItems' => function ($query) {
+                $query->where('status', 'active')
+                    ->with('media')
+                    ->orderBy('name');
+            },
+        ])
+        ->orderBy('name')
+        ->get()
+        ->map(function ($restaurant) {
+            return [
+                'id' => $restaurant->id,
+                'name' => $restaurant->name,
+                'description' => $restaurant->description,
+                'phone' => $restaurant->phone,
+                'email' => $restaurant->email,
+                'address' => $restaurant->address,
+                'city' => $restaurant->city,
+                'postal_code' => $restaurant->postal_code,
+                'country' => $restaurant->country,
+                'latitude' => $restaurant->latitude,
+                'longitude' => $restaurant->longitude,
+                'status' => $restaurant->status,
+                'opening_time' => optional($restaurant->opening_time)->format('H:i'),
+                'closing_time' => optional($restaurant->closing_time)->format('H:i'),
+                'photo' => $restaurant->photo,
+                'categories' => $restaurant->categories->map(function ($category) {
+                    return [
+                        'id' => $category->id,
+                        'restaurant_id' => $category->restaurant_id,
+                        'name' => $category->name,
+                        'sort_order' => $category->sort_order,
+                        'is_active' => $category->is_active,
+                        'items' => $category->menuItems->map(function ($item) {
+                            return [
+                                'id' => $item->id,
+                                'restaurant_id' => $item->restaurant_id,
+                                'category_id' => $item->category_id,
+                                'name' => $item->name,
+                                'description' => $item->description,
+                                'price' => $item->price,
+                                'status' => $item->status,
+                                'media' => $item->media,
+                            ];
+                        })->values(),
+                    ];
+                })->values(),
+            ];
+        })
+        ->values();
+
+    return [
+        'order' => [
+            'id' => $order->id,
+            'order_number' => $order->order_number,
+            'customer_id' => $order->customer_id,
+            'restaurant_id' => $order->restaurant_id,
+            'customer_address_id' => $order->customer_address_id,
+            'service_area_id' => $order->service_area_id,
+
+            'delivery_address' => $order->delivery_address,
+            'delivery_latitude' => $order->delivery_latitude,
+            'delivery_longitude' => $order->delivery_longitude,
+
+            'customer_note' => $order->customer_note,
+
+            'status' => $order->status,
+            'payment_status' => $order->payment_status,
+            'loss_status' => $order->loss_status,
+
+            'items_total' => $order->items_total,
+            'delivery_cost' => $order->delivery_cost,
+            'order_total' => $order->order_total,
+
+            'items' => $order->items->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'order_id' => $item->order_id,
+                    'menu_item_id' => $item->menu_item_id,
+                    'item_name' => $item->item_name,
+                    'item_price' => $item->item_price,
+                    'quantity' => $item->quantity,
+                    'line_total' => $item->line_total,
+                    'customer_note' => $item->customer_note,
+                ];
+            })->values(),
+        ],
+
+        'restaurants' => $restaurants,
+    ];
+}
+
+    // public function create(int $customerId, array $data): Order
+    // {
+    //     return DB::transaction(function () use ($customerId, $data) {
+    //         $addressData = $this->resolveAddress($customerId, $data);
+
+    //         $itemsTotal = 0;
+    //         $preparedItems = [];
+
+    //         foreach ($data['items'] as $itemData) {
+    //             $menuItem = MenuItem::query()
+    //                 ->where('id', $itemData['menu_item_id'])
+    //                 ->where('restaurant_id', $data['restaurant_id'])
+    //                 ->where('status', 'active')
+    //                 ->firstOrFail();
+
+    //             $quantity = $itemData['quantity'];
+    //             $lineTotal = $menuItem->price * $quantity;
+    //             $itemsTotal += $lineTotal;
+
+    //             $preparedItems[] = [
+    //                 'menu_item_id' => $menuItem->id,
+    //                 'item_name' => $menuItem->name,
+    //                 'item_price' => $menuItem->price,
+    //                 'quantity' => $quantity,
+    //                 'line_total' => $lineTotal,
+    //                 'customer_note' => $itemData['customer_note'] ?? null,
+    //             ];
+    //         }
+
+    //         $deliveryCost = 0;
+    //         $orderTotal = $itemsTotal + $deliveryCost;
+
+    //         $order = Order::create([
+    //             'order_number' => $this->generateOrderNumber(),
+
+    //             'customer_id' => $customerId,
+    //             'restaurant_id' => $data['restaurant_id'],
+
+    //             'customer_address_id' => $addressData['customer_address_id'],
+    //             'service_area_id' => $addressData['service_area_id'],
+
+    //             'delivery_address' => $addressData['delivery_address'],
+    //             'delivery_latitude' => $addressData['delivery_latitude'],
+    //             'delivery_longitude' => $addressData['delivery_longitude'],
+
+    //             'customer_note' => $data['customer_note'] ?? null,
+
+    //             'status' => 'pending',
+    //             'payment_status' => 'unpaid',
+    //             'loss_status' => 'none',
+
+    //             'items_total' => $itemsTotal,
+    //             'delivery_cost' => $deliveryCost,
+    //             'order_total' => $orderTotal,
+
+    //             'pending_at' => now(),
+    //             'expires_at' => now()->addMinutes(30),
+    //         ]);
+
+    //         $order->items()->createMany($preparedItems);
+
+    //         OrderStatusHistory::create([
+    //             'order_id' => $order->id,
+    //             'changed_by' => $customerId,
+    //             'old_status' => 'pending',
+    //             'new_status' => 'pending',
+    //             'note' => 'Order created by customer.',
+    //             'created_at' => now(),
+    //         ]);
+    //          // ----------------------
+    //     // Notify admin
+    //     // ----------------------
+    //     $admins = User::query()->where('role', 'admin')->get();
+
+    //     foreach ($admins as $admin) {
+    //         Mail::to($admin->email)->send(new NewOrderNotification($order));
+
+    //         EmailLog::create([
+    //             'order_id' => $order->id,
+    //             'user_id' => $admin->id,
+    //             'email' => $admin->email,
+    //             'subject' => "New order #{$order->order_number} received",
+    //             'body' => view('emails.new_order_notification', ['order' => $order])->render(),
+    //             'sent_at' => now(),
+    //         ]);
+
+    //         Notification::create([
+    //             'user_id' => $admin->id,
+    //             'order_id' => $order->id,
+    //             'title' => 'New Order Received',
+    //             'body' => "New order #{$order->order_number} has been created.",
+    //         ]);
+    //     }
+
+    //     // Send Firebase push to all admins ONLY ONCE
+    //     try {
+    //         app(FirebaseNotificationService::class)->sendToAdmins(
+    //             'New Order Created',
+    //             "New order #{$order->order_number} has been created.",
+    //             [
+    //                 'type' => 'new_order',
+    //                 'order_id' => $order->id,
+    //                 'status' => $order->status,
+    //             ]
+    //         );
+    //     } catch (\Throwable $e) {
+    //         report($e);
+    //     }
+    //         return $order->load(['items']);
+    //     });
+    // }
 
     public function show(int $customerId, int $orderId): Order
     {
