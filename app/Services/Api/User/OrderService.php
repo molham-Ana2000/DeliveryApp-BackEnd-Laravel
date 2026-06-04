@@ -145,20 +145,20 @@ private function notifyAdminsForNewOrder(Order $order): void
             'sent_at' => null,
         ]);
 
-        try {
-            Mail::to($admin->email)->send(new NewOrderNotification($order));
+        // try {
+        //     Mail::to($admin->email)->send(new NewOrderNotification($order));
 
-            $emailLog->update([
-                'sent_at' => now(),
-            ]);
-        } catch (\Throwable $e) {
-            $emailLog->update([
-                'failed_at' => now(),
-                'error_message' => $e->getMessage(),
-            ]);
+        //     $emailLog->update([
+        //         'sent_at' => now(),
+        //     ]);
+        // } catch (\Throwable $e) {
+        //     $emailLog->update([
+        //         'failed_at' => now(),
+        //         'error_message' => $e->getMessage(),
+        //     ]);
 
-            report($e);
-        }
+        //     report($e);
+        // }
     }
 
     try {

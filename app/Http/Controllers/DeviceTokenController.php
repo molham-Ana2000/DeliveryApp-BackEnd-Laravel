@@ -9,20 +9,21 @@ class DeviceTokenController extends Controller
 {
     public function store(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'token' => ['required', 'string'],
-            'platform' => ['nullable', 'string'],
+            'platform' => ['nullable', 'string', 'in:android,ios,web'],
         ]);
 
         UserDeviceToken::updateOrCreate(
-            ['token' => $request->token],
+            ['token' => $data['token']],
             [
-                'user_id' => $request->user()?->id,
-                'platform' => $request->platform,
+                'user_id' => $request->user()->id,
+                'platform' => $data['platform'] ?? null,
             ]
         );
 
         return response()->json([
+            'success' => true,
             'message' => 'Device token saved',
         ]);
     }
