@@ -4,6 +4,7 @@ namespace App\Services\Api\Admin;
 use App\Mail\OrderStatusNotification;
 use App\Models\EmailLog;
 use App\Models\Loss;
+use App\Models\Notification;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use Exception;
@@ -13,6 +14,16 @@ use App\Services\FirebaseNotificationService;
 use Illuminate\Support\Facades\Mail;
 class AdminOrderService
 {
+    private function createCustomerNotification(Order $order, string $title, string $body): void
+    {
+        Notification::create([
+            'user_id' => $order->customer_id,
+            'order_id' => $order->id,
+            'title' => $title,
+            'body' => $body,
+            'is_read' => false,
+        ]);
+    }
     public function approveOrder(int $adminId, int $orderId, array $data): Order
     {
         return DB::transaction(function () use ($adminId, $orderId, $data) {
@@ -38,6 +49,7 @@ class AdminOrderService
                 'approved_by' => $adminId,
                 'estimated_delivery_time' => $data['estimated_delivery_time'] ?? null,
             ]);
+            
 
             OrderStatusHistory::create([
                 'order_id' => $order->id,
@@ -65,6 +77,11 @@ class AdminOrderService
                 'failed_at' => null,
                 'error_message' => null,
             ]);
+            $this->createCustomerNotification(
+                $order,
+                'Order Approved',
+                "Your order #{$order->order_number} has been approved."
+            );
            try {
                 app(FirebaseNotificationService::class)->sendToUser(
                     $order->customer_id,
@@ -127,6 +144,11 @@ class AdminOrderService
                 ])->render(),
                 'sent_at' => now(),
             ]);
+              $this->createCustomerNotification(
+                $order,
+                'Order Rejected',
+                "Your order #{$order->order_number} has been rejected."
+            );
            try {
                 app(FirebaseNotificationService::class)->sendToUser(
                     $order->customer_id,
@@ -189,6 +211,11 @@ class AdminOrderService
                 ])->render(),
                 'sent_at' => now(),
             ]);
+              $this->createCustomerNotification(
+                $order,
+                'Order Requested',
+                "Your order #{$order->order_number} has been marked as requested."
+            );
            try {
                 app(FirebaseNotificationService::class)->sendToUser(
                     $order->customer_id,
