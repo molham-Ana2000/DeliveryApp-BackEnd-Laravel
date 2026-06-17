@@ -30,8 +30,8 @@ return new class extends Migration
             $table->string('postal_code', 20)->nullable();
             $table->string('country', 100)->default('Germany');
 
-            $table->decimal('latitude', 10, 8)->require();
-            $table->decimal('longitude', 11, 8)->require();
+            $table->decimal('latitude', 10, 8)->nullable();
+            $table->decimal('longitude', 11, 8)->nullable();
             
 
             $table->enum('status', ['active', 'inactive'])->default('active');
