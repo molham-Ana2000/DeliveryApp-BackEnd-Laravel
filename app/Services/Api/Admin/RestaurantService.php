@@ -68,8 +68,8 @@ class RestaurantService
                 'postal_code' => $serviceArea->postal_code,
                 'country' => $serviceArea->country,
 
-                'latitude' => $data['latitude'],
-                'longitude' => $data['longitude'],
+                'latitude' => $data['latitude'] ?? null,
+                'longitude' => $data['longitude'] ?? null,
 
                 'status' => $data['status'],
 
@@ -111,8 +111,8 @@ class RestaurantService
             $serviceArea = $this->getActiveServiceArea((int) $data['service_area_id']);
 
             $this->validateCoordinatesInsideServiceArea(
-                (float) $data['latitude'],
-                (float) $data['longitude'],
+                (float) $data['latitude'] ?? null,
+                (float) $data['longitude'] ?? null,
                 $serviceArea
             );
            

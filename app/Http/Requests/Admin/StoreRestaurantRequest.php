@@ -16,8 +16,8 @@ class StoreRestaurantRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:150', 'unique:restaurants,name'],
             'service_area_id' => ['required', 'integer', 'exists:service_areas,id'],
-            'latitude' => ['required', 'numeric', 'between:-90,90'],
-            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'status' => ['required', 'string', 'in:active,inactive'],
 
             'description' => ['nullable', 'string'],
