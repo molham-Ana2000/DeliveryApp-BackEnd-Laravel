@@ -255,7 +255,7 @@ class AdminOrderService
             $lossStatus = 'none';
             $paidAt = null;
             $notPaidAt = null;
-        $newOrderStatus = $order->status; // نحافظ على الحالة الحالية كقيمة افتراضية
+            //  $newOrderStatus = $order->status; // نحافظ على الحالة الحالية كقيمة افتراضية
 
             if ($data['payment_status'] === 'paid') {
                 $paidAmount = (float) $data['paid_amount'];
@@ -264,9 +264,9 @@ class AdminOrderService
                 $lossStatus = $lossAmount > 0 ? 'loss' : 'none';
                 $paidAt = now();
                   // ✅ المنطق الذهبي: إذا كان الطلب قيد الطلب وتم الدفع، نغير حالته إلى مدفوع
-            if ($order->status === 'requested' || $order->status === 'approved') {
-                $newOrderStatus = 'paid';
-            }
+            // if ($order->status === 'requested' || $order->status === 'approved') {
+            //     $newOrderStatus = 'paid';
+            // }
             } else { // not_paid
                 $paidAmount = 0;
                 $lossAmount = $order->order_total;
@@ -274,14 +274,14 @@ class AdminOrderService
                 $lossStatus = 'loss';
                 $notPaidAt = now();
                    // ✅ المنطق الذهبي: إذا كان الطلب قيد الطلب ولم يتم الدفع، نغير حالته إلى غير مدفوع
-            if ($order->status === 'requested' || $order->status === 'approved') {
-                $newOrderStatus = 'not_paid';
-            }
+            // if ($order->status === 'requested' || $order->status === 'approved') {
+            //     $newOrderStatus = 'not_paid';
+            // }
             }
 
             // Update orders table
             $order->update([
-                'status'=> $newOrderStatus, // الحالة الجديدة المحدثة
+                // 'status'=> $newOrderStatus, // الحالة الجديدة المحدثة
 
                 'payment_status' => $data['payment_status'],
                 'paid_amount' => $paidAmount,
