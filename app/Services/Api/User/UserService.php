@@ -26,13 +26,14 @@ class UserService
                 'role' => 'customer',
             ]);
 
-            foreach ($data['addresses'] as $index => $addressData) {
-                $this->saveAddress($user, $addressData, $index);
-            }
+            // foreach ($data['addresses'] as $index => $addressData) {
+            //     $this->saveAddress($user, $addressData, $index);
+            // }
 
             NewUserCreatedJob::dispatch($user);
 
-            return $user->load('addresses');
+            // return $user->load('addresses');
+            return $user;
         });
     }
 

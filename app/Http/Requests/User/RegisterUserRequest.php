@@ -25,14 +25,14 @@ class RegisterUserRequest extends FormRequest
             ],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
 
-            'addresses' => ['required', 'array', 'min:1'],
+            'addresses' => ['nullable', 'array', 'min:1'],
             'addresses.*.label' => ['nullable', 'string', 'max:100'],
-            'addresses.*.full_address' => ['required', 'string'],
-            'addresses.*.city' => ['required', 'string', 'max:150'],
-            'addresses.*.postal_code' => ['required', 'string', 'max:20'],
+            'addresses.*.full_address' => ['nullable', 'string'],
+            'addresses.*.city' => ['nullable', 'string', 'max:150'],
+            'addresses.*.postal_code' => ['nullable', 'string', 'max:20'],
             'addresses.*.country' => ['nullable', 'string', 'max:100'],
-            'addresses.*.latitude' => ['required', 'numeric', 'between:-90,90'],
-            'addresses.*.longitude' => ['required', 'numeric', 'between:-180,180'],
+            'addresses.*.latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'addresses.*.longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'addresses.*.is_default' => ['nullable', 'boolean'],
         ];
     }
