@@ -326,7 +326,7 @@ class AdminOrderService
     public function listOrders(array $filters)
     {
         return Order::query()
-            ->with(['items', 'customer'])
+            ->with(['customer', 'items', 'restaurant']) // ✅ أضفنا restaurant هنا
             ->when($filters['status'] ?? null, fn($q,$status) => $q->where('status',$status))
             ->when($filters['start_date'] ?? null, fn($q,$date) => $q->whereDate('created_at','>=',$date))
             ->when($filters['end_date'] ?? null, fn($q,$date) => $q->whereDate('created_at','<=',$date))
