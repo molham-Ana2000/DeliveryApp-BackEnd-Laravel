@@ -48,11 +48,11 @@ class RestaurantService
         return DB::transaction(function () use ($data, $adminId) {
             $serviceArea = $this->getActiveServiceArea((int) $data['service_area_id']);
 
-            $this->validateCoordinatesInsideServiceArea(
-                (float) $data['latitude'],
-                (float) $data['longitude'],
-                $serviceArea
-            );
+            // $this->validateCoordinatesInsideServiceArea(
+            //     (float) $data['latitude'],
+            //     (float) $data['longitude'],
+            //     $serviceArea
+            // );
 
             $restaurant= Restaurant::create([
                 'created_by' => $adminId,
@@ -110,11 +110,11 @@ class RestaurantService
         return DB::transaction(function () use ($restaurant, $data) {
             $serviceArea = $this->getActiveServiceArea((int) $data['service_area_id']);
 
-            $this->validateCoordinatesInsideServiceArea(
-                (float) $data['latitude'] ?? null,
-                (float) $data['longitude'] ?? null,
-                $serviceArea
-            );
+            // $this->validateCoordinatesInsideServiceArea(
+            //     (float) $data['latitude'] ?? null,
+            //     (float) $data['longitude'] ?? null,
+            //     $serviceArea
+            // );
            
             $restaurant->update([
                 'service_area_id' => $serviceArea->id,
@@ -129,9 +129,8 @@ class RestaurantService
                 'postal_code' => $serviceArea->postal_code,
                 'country' => $serviceArea->country,
 
-                'latitude' => $data['latitude'],
-                'longitude' => $data['longitude'],
-
+                'latitude' => $data['latitude'] ?? null,
+                'longitude' => $data['longitude'] ?? null,
                 'status' => $data['status'],
 
                 'opening_time' => $data['opening_time'] ?? null,
