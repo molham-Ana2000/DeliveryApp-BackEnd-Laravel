@@ -37,85 +37,85 @@ class OrderService
             ->paginate($filters['per_page'] ?? 15);
     }
     public function create(int $customerId, array $data): Order
-{
-    $order = DB::transaction(function () use ($customerId, $data) {
-        $addressData = $this->resolveAddress($customerId, $data);
+    {
+        $order = DB::transaction(function () use ($customerId, $data) {
+            $addressData = $this->resolveAddress($customerId, $data);
 
-        $itemsTotal = 0;
-        $preparedItems = [];
+            $itemsTotal = 0;
+            $preparedItems = [];
 
-        foreach ($data['items'] as $itemData) {
-            $menuItem = MenuItem::query()
-                ->where('id', $itemData['menu_item_id'])
-                ->where('restaurant_id', $data['restaurant_id'])
-                ->where('status', 'active')
-                ->firstOrFail();
+            foreach ($data['items'] as $itemData) {
+                $menuItem = MenuItem::query()
+                    ->where('id', $itemData['menu_item_id'])
+                    ->where('restaurant_id', $data['restaurant_id'])
+                    ->where('status', 'active')
+                    ->firstOrFail();
 
-            $quantity = $itemData['quantity'];
-            $lineTotal = $menuItem->price * $quantity;
-            $itemsTotal += $lineTotal;
+                $quantity = $itemData['quantity'];
+                $lineTotal = $menuItem->price * $quantity;
+                $itemsTotal += $lineTotal;
 
-            $preparedItems[] = [
-                'menu_item_id' => $menuItem->id,
-                'item_name' => $menuItem->name,
-                'item_price' => $menuItem->price,
-                'quantity' => $quantity,
-                'line_total' => $lineTotal,
-                'customer_note' => $itemData['customer_note'] ?? null,
-            ];
-        }
+                $preparedItems[] = [
+                    'menu_item_id' => $menuItem->id,
+                    'item_name' => $menuItem->name,
+                    'item_price' => $menuItem->price,
+                    'quantity' => $quantity,
+                    'line_total' => $lineTotal,
+                    'customer_note' => $itemData['customer_note'] ?? null,
+                ];
+            }
 
-        $deliveryCost = 0;
-        $orderTotal = $itemsTotal + $deliveryCost;
+            $deliveryCost = 0;
+            $orderTotal = $itemsTotal + $deliveryCost;
 
-        $order = Order::create([
-            'order_number' => $this->generateOrderNumber(),
+            $order = Order::create([
+                'order_number' => $this->generateOrderNumber(),
 
-            'customer_id' => $customerId,
-            'restaurant_id' => $data['restaurant_id'],
+                'customer_id' => $customerId,
+                'restaurant_id' => $data['restaurant_id'],
 
-            'customer_address_id' => $addressData['customer_address_id'],
-            'service_area_id' => $addressData['service_area_id'],
+                'customer_address_id' => $addressData['customer_address_id'],
+                'service_area_id' => $addressData['service_area_id'],
 
-            'delivery_address' => $addressData['delivery_address'],
-            'delivery_latitude' => $addressData['delivery_latitude'],
-            'delivery_longitude' => $addressData['delivery_longitude'],
+                'delivery_address' => $addressData['delivery_address'],
+                'delivery_latitude' => $addressData['delivery_latitude'],
+                'delivery_longitude' => $addressData['delivery_longitude'],
 
-            'customer_note' => $data['customer_note'] ?? null,
+                'customer_note' => $data['customer_note'] ?? null,
 
-            'status' => 'pending',
-            'payment_status' => 'unpaid',
-            'loss_status' => 'none',
+                'status' => 'pending',
+                'payment_status' => 'unpaid',
+                'loss_status' => 'none',
 
-            'items_total' => $itemsTotal,
-            'delivery_cost' => $deliveryCost,
-            'order_total' => $orderTotal,
+                'items_total' => $itemsTotal,
+                'delivery_cost' => $deliveryCost,
+                'order_total' => $orderTotal,
 
-            'pending_at' => now(),
-            'expires_at' => now()->addMinutes(30),
-        ]);
+                'pending_at' => now(),
+                'expires_at' => now()->addMinutes(30),
+            ]);
 
-        $order->items()->createMany($preparedItems);
+            $order->items()->createMany($preparedItems);
 
-        OrderStatusHistory::create([
-            'order_id' => $order->id,
-            'changed_by' => $customerId,
-            'old_status' => 'pending',
-            'new_status' => 'pending',
-            'note' => 'Order created by customer.',
-            'created_at' => now(),
-        ]);
+            OrderStatusHistory::create([
+                'order_id' => $order->id,
+                'changed_by' => $customerId,
+                'old_status' => 'pending',
+                'new_status' => 'pending',
+                'note' => 'Order created by customer.',
+                'created_at' => now(),
+            ]);
 
-        return $order->load(['items']);
-    });
+            return $order->load(['items']);
+        });
 
 
- 
+    
 
-    $this->notifyAdminsForNewOrder($order);
+        $this->notifyAdminsForNewOrder($order);
 
-    return $order;
-}
+        return $order;
+    }
 private function notifyAdminsForNewOrder(Order $order): void
 {
     $admins = User::query()
@@ -124,13 +124,13 @@ private function notifyAdminsForNewOrder(Order $order): void
         ->get();
 
     foreach ($admins as $admin) {
-        $subject = "New order #{$order->order_number} received";
+        $subject = "Neue Bestellung #{$order->order_number} erhalten";
 
         Notification::create([
             'user_id' => $admin->id,
             'order_id' => $order->id,
-            'title' => 'New Order Received',
-            'body' => "New order #{$order->order_number} has been created.",
+            'title' => 'Neue Bestellung erhalten',
+            'body' => "Die neue Bestellung #{$order->order_number} wurde erstellt.",
             'is_read' => false,
         ]);
 
@@ -145,34 +145,20 @@ private function notifyAdminsForNewOrder(Order $order): void
             'sent_at' => null,
         ]);
 
-        // try {
-        //     Mail::to($admin->email)->send(new NewOrderNotification($order));
+        try {
+            Mail::to($admin->email)->send(new NewOrderNotification($order));
 
-        //     $emailLog->update([
-        //         'sent_at' => now(),
-        //     ]);
-        // } catch (\Throwable $e) {
-        //     $emailLog->update([
-        //         'failed_at' => now(),
-        //         'error_message' => $e->getMessage(),
-        //     ]);
+            $emailLog->update([
+                'sent_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            $emailLog->update([
+                'failed_at' => now(),
+                'error_message' => $e->getMessage(),
+            ]);
 
-        //     report($e);
-        // }
-    }
-
-    try {
-        app(FirebaseNotificationService::class)->sendToAdmins(
-            'New Order Created',
-            "New order #{$order->order_number} has been created.",
-            [
-                'type' => 'new_order',
-                'order_id' => (string) $order->id,
-                'status' => $order->status,
-            ]
-        );
-    } catch (\Throwable $e) {
-        report($e);
+            report($e);
+        }
     }
 }
 public function getEditData(int $customerId, Order $order): array

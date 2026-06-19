@@ -13,26 +13,25 @@ class NewOrderNotification extends Mailable
 
     public Order $order;
 
-    /**
-     * Create a new message instance.
-     */
     public function __construct(Order $order)
     {
-        $this->order = $order;
+        $this->order = $order->loadMissing([
+            'customer',
+            'items',
+            'restaurant',
+        ]);
     }
 
-    /**
-     * Build the message.
-     */
     public function build(): self
     {
-        return $this->subject("New Order #{$this->order->order_number} Received")
-                    ->view('emails.new_order_notification')
-                    ->with([
-                        'order' => $this->order,
-                        'customerName' => $this->order->customer->first_name . ' ' . $this->order->customer->last_name,
-                        'items' => $this->order->items,
-                        'total' => $this->order->order_total,
-                    ]);
+        return $this->subject("Neue Bestellung #{$this->order->order_number} erhalten")
+            ->view('emails.new_order_notification')
+            ->with([
+                'order' => $this->order,
+                'customerName' => $this->order->customer->first_name . ' ' . $this->order->customer->last_name,
+                'restaurantName' => $this->order->restaurant->name ?? 'Unbekanntes Restaurant',
+                'items' => $this->order->items,
+                'total' => $this->order->order_total,
+            ]);
     }
 }

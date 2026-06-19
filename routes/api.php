@@ -10,3 +10,4 @@ require __DIR__ . '/api/contact_us.php';
 require __DIR__ . '/api/customer_orders.php';
 require __DIR__ . '/api/admin_orders.php';
 require __DIR__ . '/api/device-token.php';
+require __DIR__ . '/api/guest.php';

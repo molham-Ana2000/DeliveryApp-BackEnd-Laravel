@@ -4,7 +4,6 @@ use App\Http\Controllers\Api\ContactUsController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('contact-us')->group(function () {
-    Route::post('/guest', [ContactUsController::class, 'storeGuest']);
 
     Route::middleware(['auth:sanctum', 'customer'])->group(function () {
         Route::post('/customer', [ContactUsController::class, 'storeCustomer']);

@@ -59,8 +59,8 @@ class AdminOrderService
                 'note' => $data['note'] ?? 'Order approved by admin.',
                 'created_at' => now(),
             ]);
-            // Mail::to($order->customer->email)->send(
-            // new OrderStatusNotification($order, 'approved', $data['note'] ?? null));
+            Mail::to($order->customer->email)->send(
+            new OrderStatusNotification($order, 'approved', $data['note'] ?? null));
 
             // Log the email
             EmailLog::create([
@@ -127,9 +127,9 @@ class AdminOrderService
             ]);
 
             // Send email notification
-            // Mail::to($order->customer->email)->send(
-            //     new OrderStatusNotification($order, 'rejected', $data['admin_rejection_reason'])
-            // );
+            Mail::to($order->customer->email)->send(
+                new OrderStatusNotification($order, 'rejected', $data['admin_rejection_reason'])
+            );
 
             // Log the email
             EmailLog::create([
@@ -194,9 +194,9 @@ class AdminOrderService
             ]);
 
             // Send email notification
-            // Mail::to($order->customer->email)->send(
-            //     new OrderStatusNotification($order, 'requested', $note)
-            // );
+            Mail::to($order->customer->email)->send(
+                new OrderStatusNotification($order, 'requested', $note)
+            );
 
             // Log the email
             EmailLog::create([

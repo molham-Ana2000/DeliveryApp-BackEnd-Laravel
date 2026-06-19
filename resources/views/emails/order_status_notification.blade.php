@@ -1,9 +1,9 @@
-<p>Hi {{ $order->customer->first_name }},</p>
+<p>Hallo {{ $order->customer->first_name }},</p>
 
-<p>Your order <strong>#{{ $order->order_number }}</strong> status has been updated to <strong>{{ ucfirst($status) }}</strong>.</p>
+<p>Der Status Ihrer Bestellung <strong>#{{ $order->order_number }}</strong> wurde auf <strong>{{ ucfirst($status) }}</strong> aktualisiert.</p>
 
 @if($note)
-<p>Note from admin: {{ $note }}</p>
+<p>Hinweis vom Administrator: {{ $note }}</p>
 @endif
 
-<p>Thank you for using our service!</p>
+<p>Vielen Dank, dass Sie unseren Service nutzen!</p>

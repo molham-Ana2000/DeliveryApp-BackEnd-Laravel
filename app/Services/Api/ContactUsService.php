@@ -2,6 +2,7 @@
 
 namespace App\Services\Api;
 
+use App\Mail\ContactUsAdminNotification;
 use App\Mail\ContactUsReplyMail;
 use App\Models\ContactUs;
 use App\Models\User;
@@ -10,33 +11,37 @@ use Illuminate\Support\Facades\Mail;
 
 class ContactUsService
 {
-    public function createGuest(array $data): ContactUs
-    {
-        return ContactUs::create([
-            'user_id' => null,
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'phone' => $data['phone'] ?? null,
-            'subject' => $data['subject'],
-            'message' => $data['message'],
-            'status' => 'new',
-        ]);
-    }
+ 
 
-    public function createCustomer(User $user, array $data): ContactUs
-    {
-        $fullName = trim($user->first_name . ' ' . $user->last_name);
+public function createCustomer(User $user, array $data): ContactUs
+{
+    $fullName = trim($user->first_name . ' ' . $user->last_name);
 
-        return ContactUs::create([
-            'user_id' => $user->id,
-            'name' => $fullName !== '' ? $fullName : $user->email,
-            'email' => $user->email,
-            'phone' => $data['phone'] ?? $user->phone,
-            'subject' => $data['subject'],
-            'message' => $data['message'],
-            'status' => 'new',
-        ]);
+    $contact = ContactUs::create([
+        'user_id' => $user->id,
+        'name' => $fullName !== '' ? $fullName : $user->email,
+        'email' => $user->email,
+        'phone' => $data['phone'] ?? $user->phone,
+        'subject' => $data['subject'],
+        'message' => $data['message'],
+        'status' => 'new',
+    ]);
+
+    $this->notifyAdminsForNewContactMessage($contact);
+
+    return $contact;
+}
+private function notifyAdminsForNewContactMessage(ContactUs $contact): void
+{
+    $admins = User::query()
+        ->where('role', 'admin')
+        ->whereNotNull('email')
+        ->get();
+
+    foreach ($admins as $admin) {
+        Mail::to($admin->email)->send(new ContactUsAdminNotification($contact));
     }
+}
 
     public function paginateForAdmin(array $filters): LengthAwarePaginator
     {
