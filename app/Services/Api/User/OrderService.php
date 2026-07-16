@@ -23,7 +23,7 @@ class OrderService
     {
         return Order::query()
             ->where('customer_id', $customerId)
-      
+
             ->when($filters['status'] ?? null, function ($q, $status) {
                 $q->where('status', $status);
             })
@@ -110,7 +110,7 @@ class OrderService
         });
 
 
-    
+
 
         $this->notifyAdminsForNewOrder($order);
 
@@ -151,6 +151,7 @@ private function notifyAdminsForNewOrder(Order $order): void
             $emailLog->update([
                 'sent_at' => now(),
             ]);
+            
         } catch (\Throwable $e) {
             $emailLog->update([
                 'failed_at' => now(),
@@ -159,6 +160,7 @@ private function notifyAdminsForNewOrder(Order $order): void
 
             report($e);
         }
+
     }
 }
 public function getEditData(int $customerId, Order $order): array
@@ -566,7 +568,7 @@ public function getEditData(int $customerId, Order $order): array
         ];
     }
 
-    private function validateLocationInsideServiceArea(ServiceArea $serviceArea,float $latitude,float $longitude): void 
+    private function validateLocationInsideServiceArea(ServiceArea $serviceArea,float $latitude,float $longitude): void
     {
         if (empty($serviceArea->polygon)) {
             throw new Exception('Service area polygon is missing.');
