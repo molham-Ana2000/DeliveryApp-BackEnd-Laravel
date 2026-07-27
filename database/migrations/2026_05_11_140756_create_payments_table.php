@@ -12,8 +12,8 @@ return new class extends Migration
             $table->id();
 
             $table->foreignId('order_id')
-                ->constrained('orders')
-                ->cascadeOnDelete();
+            ->constrained('orders')
+            ->restrictOnDelete();
 
             $table->foreignId('updated_by')
                 ->nullable()

@@ -120,6 +120,12 @@ class UserAdminController extends Controller
     public function block(User $user)
     {
         try {
+            if ($user->role === 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot block an admin user.',
+                ], 403);
+            }
             $this->userService->blockUser($user);
 
             return response()->json([

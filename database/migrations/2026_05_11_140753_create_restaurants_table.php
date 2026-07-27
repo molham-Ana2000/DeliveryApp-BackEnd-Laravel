@@ -12,8 +12,9 @@ return new class extends Migration
             $table->id();
 
             $table->foreignId('created_by')
-                ->constrained('users')
-                ->cascadeOnDelete();
+            ->nullable()
+            ->constrained('users')
+            ->nullOnDelete();
 
             $table->string('name', 150);
             $table->text('description')->nullable();
@@ -32,7 +33,7 @@ return new class extends Migration
 
             $table->decimal('latitude', 10, 8)->nullable();
             $table->decimal('longitude', 11, 8)->nullable();
-            
+
 
             $table->enum('status', ['active', 'inactive'])->default('active');
 

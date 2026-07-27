@@ -11,13 +11,14 @@ return new class extends Migration
         Schema::create('losses', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('order_id')
-                ->constrained('orders')
-                ->cascadeOnDelete();
+           $table->foreignId('order_id')
+            ->constrained('orders')
+            ->restrictOnDelete();
 
             $table->foreignId('recorded_by')
-                ->constrained('users')
-                ->cascadeOnDelete();
+            ->nullable()
+            ->constrained('users')
+            ->nullOnDelete();
 
             $table->decimal('amount', 10, 2);
             $table->text('reason');

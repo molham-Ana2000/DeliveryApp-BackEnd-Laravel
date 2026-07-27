@@ -12,14 +12,14 @@ return new class extends Migration
             $table->id();
 
             $table->string('order_number', 50)->unique();
-
             $table->foreignId('customer_id')
+                ->nullable()
                 ->constrained('users')
-                ->cascadeOnDelete();
+                ->nullOnDelete();
 
             $table->foreignId('restaurant_id')
-                ->constrained('restaurants')
-                ->cascadeOnDelete();
+            ->constrained('restaurants')
+            ->restrictOnDelete();
 
             $table->foreignId('customer_address_id')
                 ->nullable()

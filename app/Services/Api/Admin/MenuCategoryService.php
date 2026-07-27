@@ -16,7 +16,7 @@ use RuntimeException;
 
 class MenuCategoryService
 {
-    
+
     public function list(array $filters = []): LengthAwarePaginator
     {
         return MenuCategory::query()
@@ -432,9 +432,9 @@ class MenuCategoryService
 //             $restaurant = $this->getActiveRestaurant((int) $data['restaurant_id']);
 //             $sortOrder = $this->resolveSortOrder(
 //             $restaurant->id,
-            
+
 //             isset($data['sort_order']) ? (int) $data['sort_order'] : 0);
-    
+
 
 //             $category = MenuCategory::create([
 //                 'restaurant_id' => $restaurant->id,
@@ -662,7 +662,7 @@ class MenuCategoryService
 //         int $restaurantId,
 //         ?int $requestedSortOrder,
 //         ?int $ignoreCategoryId = null
-//         ): int 
+//         ): int
 //     {
 //         $sortOrder = $requestedSortOrder ?? 0;
 
